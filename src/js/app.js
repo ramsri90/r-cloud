@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         filesContainer.innerHTML = files.map(file => `
-            <div class="file-card">
+            <div class="file-card" data-file-id="${file.id}">
                 <div class="file-preview">
                     ${getFilePreviewHTML(file)}
                 </div>
@@ -68,10 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p>${formatFileSize(file.size)} • ${file.date}</p>
                 </div>
                 <div class="file-actions">
-                    <button class="btn-icon" title="View / Play" onclick="window.openMediaViewer('${file.id}')">
+                    <button class="btn-icon view-btn" data-id="${file.id}" title="View / Play">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
-                    <a href="${file.url}" download="${escapeHTML(file.name)}" class="btn-icon" title="Download">
+                    <a href="${file.url || '#'}" download="${escapeHTML(file.name)}" class="btn-icon" title="Download">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     </a>
                     <button class="btn-icon delete-btn" data-id="${file.id}" title="Delete">
@@ -81,10 +81,27 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        // Attach Delete Listeners
+        // View button event delegation
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openMediaViewerById(btn.dataset.id);
+            });
+        });
+
+        // Preview click on card body
+        document.querySelectorAll('.file-preview').forEach(preview => {
+            preview.addEventListener('click', () => {
+                const card = preview.closest('[data-file-id]');
+                if (card) openMediaViewerById(card.dataset.fileId);
+            });
+        });
+
+        // Delete listeners
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.currentTarget.dataset.id;
+                e.stopPropagation();
+                const id = btn.dataset.id;
                 if (confirm('Delete this file from R Cloud?')) {
                     getActiveDrive().deleteFile(id);
                     renderFiles();
@@ -96,87 +113,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getFilePreviewHTML(file) {
         if (file.category === 'images') {
-            return `<img src="${file.url}" alt="${escapeHTML(file.name)}" loading="lazy" style="cursor: pointer;" onclick="window.openMediaViewer('${file.id}')">`;
+            return `<img src="${file.url || ''}" alt="${escapeHTML(file.name)}" loading="lazy" style="cursor: pointer; width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">`;
         }
         if (file.category === 'videos') {
             return `
-                <div style="position: relative; width: 100%; height: 100%; cursor: pointer;" onclick="window.openMediaViewer('${file.id}')">
-                    <video src="${file.url}" muted preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+                <div style="position: relative; width: 100%; height: 100%; cursor: pointer;">
+                    <video src="${file.url || ''}" muted preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="#65de69"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     </div>
                 </div>`;
         }
         if (file.category === 'music') {
             return `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 8px; cursor: pointer;" onclick="window.openMediaViewer('${file.id}')">
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 8px; cursor: pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="40" height="40"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                     <span style="font-size: 11px; color: var(--accent); font-weight: 600;">▶ Listen Audio</span>
                 </div>`;
         }
         return `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 8px; cursor: pointer;" onclick="window.openMediaViewer('${file.id}')">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 8px; cursor: pointer;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="40" height="40"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                 <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">👁 View Document</span>
             </div>`;
     }
 
-    window.openMediaViewer = function(fileId) {
-        const activeDrive = getActiveDrive();
-        const files = activeDrive.getFiles('all');
-        const file = files.find(f => f.id === fileId);
-        if (!file) return;
+    // File store — accessible by ID for viewer
+    function getFileById(fileId) {
+        const allFiles = getActiveDrive().getFiles('all');
+        return allFiles.find(f => f.id === fileId) || null;
+    }
+
+    function openMediaViewerById(fileId) {
+        const file = getFileById(fileId);
+        if (!file) { console.warn('openMediaViewer: file not found', fileId); return; }
 
         const modal = document.getElementById('mediaViewerModal');
-        const title = document.getElementById('mediaViewerTitle');
+        const titleEl = document.getElementById('mediaViewerTitle');
         const body = document.getElementById('mediaViewerBody');
         const downloadBtn = document.getElementById('mediaViewerDownloadBtn');
 
-        if (title) title.textContent = file.name;
+        if (!modal || !body) { console.warn('openMediaViewer: modal elements missing'); return; }
 
-        const mediaSrc = file.url || file.localUrl || '#';
+        const mediaSrc = file.url || file.localUrl || '';
+        if (titleEl) titleEl.textContent = file.name;
         if (downloadBtn) {
-            downloadBtn.href = mediaSrc;
+            downloadBtn.href = mediaSrc || '#';
             downloadBtn.setAttribute('download', file.name);
         }
 
         if (file.category === 'images') {
-            body.innerHTML = `<img id="mediaElement" src="${mediaSrc}" alt="${escapeHTML(file.name)}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;">`;
+            body.innerHTML = `<img id="mediaElement" src="${mediaSrc}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">`;
         } else if (file.category === 'videos') {
-            body.innerHTML = `<video id="mediaElement" src="${mediaSrc}" controls autoplay style="max-width: 100%; max-height: 70vh; border-radius: 8px; outline: none;"></video>`;
+            body.innerHTML = `<video id="mediaElement" src="${mediaSrc}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
         } else if (file.category === 'music') {
             body.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 30px;">
-                    <div style="width: 80px; height: 80px; background: rgba(101,222,105,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px var(--accent-glow);">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px;">
+                    <div style="width:80px;height:80px;background:rgba(101,222,105,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--accent-glow);">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                     </div>
-                    <audio id="mediaElement" src="${mediaSrc}" controls autoplay style="width: 320px; outline: none;"></audio>
+                    <audio id="mediaElement" src="${mediaSrc}" controls autoplay style="width:320px;outline:none;"></audio>
                 </div>`;
         } else {
             body.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px; text-align: center;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
                     <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    <p style="font-size: 14px; color: var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
-                    <a href="${mediaSrc}" target="_blank" class="btn btn-secondary" style="text-decoration: none;">🔗 Open Document in New Tab</a>
+                    <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
+                    <a href="${mediaSrc || '#'}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
                 </div>`;
         }
 
-        // Open modal INSTANTLY (0ms latency, zero freeze!)
-        if (modal) modal.classList.add('active');
+        modal.classList.add('active');
 
-        // Non-blocking background URL refresh if fileId exists
-        if (file.fileId && activeDrive.getFileDownloadUrl) {
-            activeDrive.getFileDownloadUrl(file.fileId).then(freshUrl => {
-                if (freshUrl && freshUrl !== file.url) {
-                    file.url = freshUrl;
-                    const mediaElement = document.getElementById('mediaElement');
-                    if (mediaElement) mediaElement.src = freshUrl;
-                    if (downloadBtn) downloadBtn.href = freshUrl;
-                }
-            }).catch(err => console.warn('URL refresh error:', err));
+        // Background refresh for expired Telegram URLs
+        if (file.fileId) {
+            const activeDrive = getActiveDrive();
+            if (activeDrive && activeDrive.getFileDownloadUrl) {
+                activeDrive.getFileDownloadUrl(file.fileId).then(freshUrl => {
+                    if (freshUrl) {
+                        file.url = freshUrl;
+                        const el = document.getElementById('mediaElement');
+                        if (el) el.src = freshUrl;
+                        if (downloadBtn) downloadBtn.href = freshUrl;
+                    }
+                }).catch(() => {});
+            }
         }
-    };
+    }
 
+    // Also expose globally for any legacy callers
+    window.openMediaViewer = openMediaViewerById;
+
+    // Close media viewer — dedicated close button
     const closeMediaViewerBtn = document.getElementById('closeMediaViewerBtn');
     if (closeMediaViewerBtn) {
         closeMediaViewerBtn.addEventListener('click', () => {
@@ -186,6 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modal) modal.classList.remove('active');
         });
     }
+
+    // Close on overlay click
+    document.getElementById('mediaViewerModal')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            e.currentTarget.classList.remove('active');
+            const body = document.getElementById('mediaViewerBody');
+            if (body) body.innerHTML = '';
+        }
+    });
 
     function updateStorageUsage() {
         const activeDrive = getActiveDrive();
@@ -455,8 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.btn-close').forEach(btn => {
         btn.addEventListener('click', () => {
-            loginModal.classList.remove('active');
-            settingsModal.classList.remove('active');
+            if (loginModal) loginModal.classList.remove('active');
+            if (settingsModal) settingsModal.classList.remove('active');
+            // Note: mediaViewerModal has its own close handler above
         });
     });
 
