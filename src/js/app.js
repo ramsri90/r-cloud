@@ -175,6 +175,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Login Modal Tab Switcher
+    const tabBotBtn = document.getElementById('tabBotBtn');
+    const tabPhoneBtn = document.getElementById('tabPhoneBtn');
+    const botLoginSection = document.getElementById('botLoginSection');
+    const phoneLoginSection = document.getElementById('phoneLoginSection');
+
+    if (tabBotBtn && tabPhoneBtn) {
+        tabBotBtn.addEventListener('click', () => {
+            tabBotBtn.classList.add('active');
+            tabPhoneBtn.classList.remove('active');
+            botLoginSection.style.display = 'block';
+            phoneLoginSection.style.display = 'none';
+        });
+        tabPhoneBtn.addEventListener('click', () => {
+            tabPhoneBtn.classList.add('active');
+            tabBotBtn.classList.remove('active');
+            phoneLoginSection.style.display = 'block';
+            botLoginSection.style.display = 'none';
+        });
+    }
+
+    // Telegram Bot 1-Tap Global Callback
+    window.onTelegramAuth = function(user) {
+        console.log('[R Cloud] 1-Tap Telegram Auth User:', user);
+        drive.loginWithTelegramBot(user);
+        if (loginModal) loginModal.classList.remove('active');
+        updateAuthStatus();
+        renderFiles();
+    };
+
     // Phone Code Step Handlers
     const sendPhoneBtn = document.getElementById('sendPhoneBtn');
     const verifyCodeBtn = document.getElementById('verifyCodeBtn');

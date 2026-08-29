@@ -61,6 +61,23 @@ class TelegramDriveClient {
         });
     }
 
+    // Telegram Bot 1-Tap Login Handler
+    loginWithTelegramBot(botUserData) {
+        const userData = {
+            id: botUserData.id,
+            firstName: botUserData.first_name || 'Telegram User',
+            lastName: botUserData.last_name || '',
+            username: botUserData.username || 'user_' + botUserData.id,
+            photoUrl: botUserData.photo_url || '',
+            authDate: botUserData.auth_date,
+            method: 'bot_auth'
+        };
+        this.user = userData;
+        this.isAuthenticated = true;
+        localStorage.setItem(this.sessionKey, JSON.stringify(userData));
+        return { success: true, user: userData };
+    }
+
     // QR Code Login Simulator / QR Data Generator
     async generateQRData() {
         const qrPayload = `tg://login?token=${Math.random().toString(36).substring(2)}`;
