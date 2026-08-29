@@ -154,9 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const downloadBtn = document.getElementById('mediaViewerDownloadBtn');
 
         if (!modal || !body) return;
-
-        // Show modal immediately with a loading spinner
         if (titleEl) titleEl.textContent = file.name;
+
+        // Show spinner immediately
         body.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px;color:var(--text-secondary);">
                 <div style="width:48px;height:48px;border:3px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
@@ -164,15 +164,16 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         modal.classList.add('active');
 
-        // Always fetch a fresh URL from Telegram (URLs expire in 1hr)
         const activeDrive = getActiveDrive();
-        const doRender = (src) => {
+
+        // renderMedia: given a browser-safe src URL, render the correct element
+        function renderMedia(src, downloadUrl) {
             if (downloadBtn) {
-                downloadBtn.href = src || '#';
+                downloadBtn.href = downloadUrl || src || '#';
                 downloadBtn.setAttribute('download', file.name);
             }
             if (file.category === 'images') {
-                body.innerHTML = `<img src="${src}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;" onerror="this.outerHTML='<p style=color:var(--text-secondary)>Could not load image. Try downloading instead.</p>'">`;
+                body.innerHTML = `<img src="${src}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">`;
             } else if (file.category === 'videos') {
                 body.innerHTML = `<video src="${src}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
             } else if (file.category === 'music') {
@@ -188,20 +189,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
                         <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                         <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
-                        <a href="${src}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
+                        <a href="${downloadUrl || src || '#'}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
                     </div>`;
             }
-        };
+        }
 
-        if (file.fileId && activeDrive.getFileDownloadUrl) {
-            activeDrive.getFileDownloadUrl(file.fileId)
-                .then(freshUrl => {
-                    if (freshUrl) { file.url = freshUrl; }
-                    doRender(freshUrl || file.url || '');
-                })
-                .catch(() => doRender(file.url || ''));
+        // Strategy: use blob URL if available, else fetch fresh from Telegram
+        // file.url is a local blob URL (works instantly, no CORS) — but expires on page reload
+        // If it's a blob URL from this session: test it first by trying to use it
+        const fileId_ = file.fileId || file.telegramFileId || '';
+
+        if (file.url && file.url.startsWith('blob:')) {
+            // Blob URL from current session — use directly (fast path)
+            // Also get a Telegram download URL in background for the download button
+            renderMedia(file.url, null);
+            if (fileId_ && activeDrive.getFileDownloadUrl) {
+                activeDrive.getFileDownloadUrl(fileId_).then(dlUrl => {
+                    if (downloadBtn && dlUrl) downloadBtn.href = dlUrl;
+                }).catch(() => {});
+            }
+        } else if (fileId_ && activeDrive.getFileDownloadUrl) {
+            // No blob URL (after reload): fetch raw file bytes from Telegram and make a fresh blob
+            activeDrive.getFileDownloadUrl(fileId_).then(async dlUrl => {
+                if (!dlUrl) {
+                    body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">Could not load file. Please re-upload.</p>`;
+                    return;
+                }
+                // Fetch the file bytes and make a browser blob URL (works around img/video src CORS)
+                try {
+                    const resp = await fetch(dlUrl);
+                    const blob = await resp.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    file.url = blobUrl; // cache for this session
+                    renderMedia(blobUrl, dlUrl);
+                } catch {
+                    // If fetch fails (CORS), still show download link
+                    renderMedia('', dlUrl);
+                }
+            }).catch(() => {
+                body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">Could not load file. Please re-upload.</p>`;
+            });
         } else {
-            doRender(file.url || '');
+            body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">No preview available. Please re-upload this file.</p>`;
         }
     }
 

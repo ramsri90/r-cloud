@@ -76,6 +76,9 @@ class UniversalBotDrive {
     async uploadFile(file, progressCallback) {
         if (!this.chatId) throw new Error('Please connect your Chat ID first.');
 
+        // Create local blob URL immediately from the File object (browser-safe, no CORS)
+        const localBlobUrl = URL.createObjectURL(file);
+
         const formData = new FormData();
         formData.append('chat_id', this.chatId);
         formData.append('caption', `📦 R Cloud File: ${file.name}`);
@@ -92,7 +95,6 @@ class UniversalBotDrive {
                         progressCallback(pct);
                     }
                 };
-                // When upload reaches 100%, show waiting state
                 xhr.upload.onloadend = () => progressCallback(100);
             }
 
@@ -111,17 +113,12 @@ class UniversalBotDrive {
                                 size: file.size,
                                 type: file.type || 'application/octet-stream',
                                 date: new Date().toLocaleDateString(),
-                                url: '',  // will be fetched below
+                                // localBlobUrl is browser-safe for display (img/video/audio)
+                                // telegramUrl is for downloads only (CORS-blocked for display)
+                                url: localBlobUrl,
+                                telegramFileId: fileId || '',
                                 category: this.detectCategory(file.type, file.name)
                             };
-
-                            // Fetch download URL async (non-blocking)
-                            if (fileId) {
-                                this.getFileDownloadUrl(fileId).then(url => {
-                                    newFile.url = url || '';
-                                    localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
-                                }).catch(() => {});
-                            }
 
                             this.files.unshift(newFile);
                             localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
@@ -142,7 +139,7 @@ class UniversalBotDrive {
         });
     }
 
-    // Get Download/Stream URL from Telegram File ID
+    // Get Telegram direct download URL (for downloads only — CORS-blocked for display)
     async getFileDownloadUrl(fileId) {
         try {
             const res = await fetch(this.getApiUrl('getFile'), {
