@@ -2,6 +2,61 @@
  * Universal R Cloud Bot API Drive Engine
  * Connects any Telegram Channel / Group Chat ID to Telegram's unlimited cloud storage.
  */
+
+// --- IndexedDB Persistence Helper ---
+const RCLOUD_DB_NAME = 'RCloudFileDB';
+const RCLOUD_STORE_NAME = 'file_blobs';
+
+function getRCloudDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(RCLOUD_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(RCLOUD_STORE_NAME)) {
+                db.createObjectStore(RCLOUD_STORE_NAME);
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function storeFileInIDB(id, blob) {
+    try {
+        const db = await getRCloudDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(RCLOUD_STORE_NAME, 'readwrite');
+            tx.objectStore(RCLOUD_STORE_NAME).put(blob, id);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        console.warn('[IDB] Store error:', e);
+    }
+}
+
+async function getFileFromIDB(id) {
+    try {
+        const db = await getRCloudDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(RCLOUD_STORE_NAME, 'readonly');
+            const req = tx.objectStore(RCLOUD_STORE_NAME).get(id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+async function deleteFileFromIDB(id) {
+    try {
+        const db = await getRCloudDB();
+        const tx = db.transaction(RCLOUD_STORE_NAME, 'readwrite');
+        tx.objectStore(RCLOUD_STORE_NAME).delete(id);
+    } catch (e) {}
+}
+
 class UniversalBotDrive {
     constructor() {
         // Obfuscated token to satisfy GitHub Secret Scanner & security
@@ -76,9 +131,6 @@ class UniversalBotDrive {
     async uploadFile(file, progressCallback) {
         if (!this.chatId) throw new Error('Please connect your Chat ID first.');
 
-        // Create local blob URL immediately from the File object (browser-safe, no CORS)
-        const localBlobUrl = URL.createObjectURL(file);
-
         const formData = new FormData();
         formData.append('chat_id', this.chatId);
         formData.append('caption', `📦 R Cloud File: ${file.name}`);
@@ -98,25 +150,25 @@ class UniversalBotDrive {
                 xhr.upload.onloadend = () => progressCallback(100);
             }
 
-            xhr.onload = () => {
+            xhr.onload = async () => {
                 if (xhr.status === 200) {
                     try {
                         const res = JSON.parse(xhr.responseText);
                         if (res.ok && res.result) {
                             const mediaObj = res.result.document || res.result.video || res.result.audio || (res.result.photo && res.result.photo[res.result.photo.length - 1]);
                             const fileId = mediaObj ? mediaObj.file_id : null;
+                            const newId = 'file_' + Date.now();
+
+                            // Save original binary file to IndexedDB for 100% persistent local viewing
+                            await storeFileInIDB(newId, file);
 
                             const newFile = {
-                                id: 'file_' + Date.now(),
+                                id: newId,
                                 fileId: fileId || '',
                                 name: file.name,
                                 size: file.size,
                                 type: file.type || 'application/octet-stream',
                                 date: new Date().toLocaleDateString(),
-                                // localBlobUrl is browser-safe for display (img/video/audio)
-                                // telegramUrl is for downloads only (CORS-blocked for display)
-                                url: localBlobUrl,
-                                telegramFileId: fileId || '',
                                 category: this.detectCategory(file.type, file.name)
                             };
 
@@ -139,8 +191,9 @@ class UniversalBotDrive {
         });
     }
 
-    // Get Telegram direct download URL (for downloads only — CORS-blocked for display)
+    // Get Telegram direct download URL
     async getFileDownloadUrl(fileId) {
+        if (!fileId) return null;
         try {
             const res = await fetch(this.getApiUrl('getFile'), {
                 method: 'POST',
@@ -208,7 +261,6 @@ class UniversalBotDrive {
                     if (fileObj) {
                         const exists = this.files.some(f => f.fileId === fileObj.fileId);
                         if (!exists) {
-                            const downloadUrl = await this.getFileDownloadUrl(fileObj.fileId);
                             const newFile = {
                                 id: 'tg_' + fileObj.fileId,
                                 fileId: fileObj.fileId,
@@ -216,7 +268,6 @@ class UniversalBotDrive {
                                 size: fileObj.size,
                                 type: fileObj.mimeType,
                                 date: new Date(post.date * 1000).toLocaleDateString(),
-                                url: downloadUrl || '',
                                 category: this.detectCategory(fileObj.mimeType, fileObj.name)
                             };
                             this.files.unshift(newFile);
@@ -228,15 +279,6 @@ class UniversalBotDrive {
         } catch (e) {
             console.warn('[R Cloud] syncChannelFiles error:', e);
         }
-
-        // Refresh URLs for existing files to prevent Telegram 1-hour URL expiration
-        for (const file of this.files) {
-            if (file.fileId) {
-                const freshUrl = await this.getFileDownloadUrl(file.fileId);
-                if (freshUrl) file.url = freshUrl;
-            }
-        }
-        localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
         return this.files;
     }
 
@@ -273,6 +315,7 @@ class UniversalBotDrive {
         if (this.chatId) {
             localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
         }
+        deleteFileFromIDB(fileId);
     }
 
     logout() {
@@ -285,4 +328,7 @@ class UniversalBotDrive {
     }
 }
 
+window.UniversalBotDrive = UniversalBotDrive;
+window.getFileFromIDB = getFileFromIDB;
+window.storeFileInIDB = storeFileInIDB;
 window.universalDrive = new UniversalBotDrive();

@@ -109,16 +109,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // Load thumbnails asynchronously from IndexedDB or wsrv.nl proxy
+        loadThumbnailsAsync();
     }
 
     function getFilePreviewHTML(file) {
         if (file.category === 'images') {
-            return `<img src="${file.url || ''}" alt="${escapeHTML(file.name)}" loading="lazy" style="cursor: pointer; width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">`;
+            return `<img src="${file.url || ''}" id="thumb_${file.id}" alt="${escapeHTML(file.name)}" loading="lazy" style="cursor: pointer; width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">`;
         }
         if (file.category === 'videos') {
             return `
                 <div style="position: relative; width: 100%; height: 100%; cursor: pointer;">
-                    <video src="${file.url || ''}" muted preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <video src="${file.url || ''}" id="thumb_${file.id}" muted preload="metadata" style="width: 100%; height: 100%; object-fit: cover;"></video>
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="#65de69"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     </div>
@@ -138,13 +141,34 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
     }
 
+    // Populate thumbnails asynchronously from IndexedDB
+    async function loadThumbnailsAsync() {
+        const activeDrive = getActiveDrive();
+        const files = activeDrive.getFiles('all');
+        for (const file of files) {
+            const thumbElem = document.getElementById(`thumb_${file.id}`);
+            if (!thumbElem) continue;
+
+            const blob = window.getFileFromIDB ? await window.getFileFromIDB(file.id) : null;
+            if (blob) {
+                thumbElem.src = URL.createObjectURL(blob);
+            } else if (file.fileId && file.category === 'images') {
+                activeDrive.getFileDownloadUrl(file.fileId).then(tgUrl => {
+                    if (tgUrl && thumbElem) {
+                        thumbElem.src = 'https://wsrv.nl/?url=' + encodeURIComponent(tgUrl);
+                    }
+                }).catch(() => {});
+            }
+        }
+    }
+
     // File store — accessible by ID for viewer
     function getFileById(fileId) {
         const allFiles = getActiveDrive().getFiles('all');
         return allFiles.find(f => f.id === fileId) || null;
     }
 
-    function openMediaViewerById(fileId) {
+    async function openMediaViewerById(fileId) {
         const file = getFileById(fileId);
         if (!file) { console.warn('[Viewer] file not found:', fileId); return; }
 
@@ -166,71 +190,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const activeDrive = getActiveDrive();
 
-        // renderMedia: given a browser-safe src URL, render the correct element
-        function renderMedia(src, downloadUrl) {
-            if (downloadBtn) {
-                downloadBtn.href = downloadUrl || src || '#';
-                downloadBtn.setAttribute('download', file.name);
-            }
-            if (file.category === 'images') {
-                body.innerHTML = `<img src="${src}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">`;
-            } else if (file.category === 'videos') {
-                body.innerHTML = `<video src="${src}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
-            } else if (file.category === 'music') {
-                body.innerHTML = `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px;">
-                        <div style="width:80px;height:80px;background:rgba(101,222,105,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--accent-glow);">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                        </div>
-                        <audio src="${src}" controls autoplay style="width:320px;outline:none;"></audio>
-                    </div>`;
-            } else {
-                body.innerHTML = `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                        <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
-                        <a href="${downloadUrl || src || '#'}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
-                    </div>`;
+        let mediaSrc = '';
+        let downloadUrl = '';
+
+        // Step 1: Check IndexedDB for binary blob (100% persistent, local, 0ms latency, zero CORS)
+        const localBlob = window.getFileFromIDB ? await window.getFileFromIDB(file.id) : null;
+        if (localBlob) {
+            mediaSrc = URL.createObjectURL(localBlob);
+            downloadUrl = mediaSrc;
+        }
+
+        // Step 2: Fetch Telegram download link for download button / remote fallback
+        if (file.fileId && activeDrive && activeDrive.getFileDownloadUrl) {
+            try {
+                const tgUrl = await activeDrive.getFileDownloadUrl(file.fileId);
+                if (tgUrl) {
+                    downloadUrl = tgUrl;
+                    if (!mediaSrc) {
+                        if (file.category === 'images') {
+                            mediaSrc = 'https://wsrv.nl/?url=' + encodeURIComponent(tgUrl);
+                        } else {
+                            mediaSrc = tgUrl;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[Viewer] fetch Telegram URL error:', e);
             }
         }
 
-        // Strategy: use blob URL if available, else fetch fresh from Telegram
-        // file.url is a local blob URL (works instantly, no CORS) — but expires on page reload
-        // If it's a blob URL from this session: test it first by trying to use it
-        const fileId_ = file.fileId || file.telegramFileId || '';
+        if (downloadBtn) {
+            downloadBtn.href = downloadUrl || mediaSrc || '#';
+            downloadBtn.setAttribute('download', file.name);
+        }
 
-        if (file.url && file.url.startsWith('blob:')) {
-            // Blob URL from current session — use directly (fast path)
-            // Also get a Telegram download URL in background for the download button
-            renderMedia(file.url, null);
-            if (fileId_ && activeDrive.getFileDownloadUrl) {
-                activeDrive.getFileDownloadUrl(fileId_).then(dlUrl => {
-                    if (downloadBtn && dlUrl) downloadBtn.href = dlUrl;
-                }).catch(() => {});
-            }
-        } else if (fileId_ && activeDrive.getFileDownloadUrl) {
-            // No blob URL (after reload): fetch raw file bytes from Telegram and make a fresh blob
-            activeDrive.getFileDownloadUrl(fileId_).then(async dlUrl => {
-                if (!dlUrl) {
-                    body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">Could not load file. Please re-upload.</p>`;
-                    return;
-                }
-                // Fetch the file bytes and make a browser blob URL (works around img/video src CORS)
-                try {
-                    const resp = await fetch(dlUrl);
-                    const blob = await resp.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    file.url = blobUrl; // cache for this session
-                    renderMedia(blobUrl, dlUrl);
-                } catch {
-                    // If fetch fails (CORS), still show download link
-                    renderMedia('', dlUrl);
-                }
-            }).catch(() => {
-                body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">Could not load file. Please re-upload.</p>`;
-            });
+        if (file.category === 'images') {
+            body.innerHTML = `<img src="${mediaSrc}" alt="${escapeHTML(file.name)}" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">`;
+        } else if (file.category === 'videos') {
+            body.innerHTML = `<video src="${mediaSrc}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
+        } else if (file.category === 'music') {
+            body.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px;">
+                    <div style="width:80px;height:80px;background:rgba(101,222,105,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--accent-glow);">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    </div>
+                    <audio src="${mediaSrc}" controls autoplay style="width:320px;outline:none;"></audio>
+                </div>`;
         } else {
-            body.innerHTML = `<p style="color:var(--text-secondary);padding:20px;text-align:center;">No preview available. Please re-upload this file.</p>`;
+            body.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
+                    <a href="${downloadUrl || mediaSrc || '#'}" target="_blank" download="${escapeHTML(file.name)}" class="btn btn-secondary" style="text-decoration:none;">⬇️ Download / Open File</a>
+                </div>`;
         }
     }
 
