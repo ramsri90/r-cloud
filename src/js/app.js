@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 connectChatIdBtn.textContent = 'Connecting...';
                 await universalDrive.connectChatId(chatId, botToken);
                 alert(`✅ Successfully connected to "${universalDrive.chatTitle}"!`);
+                if (settingsModal) settingsModal.classList.remove('active');
                 if (loginModal) loginModal.classList.remove('active');
                 updateAuthStatus();
                 renderFiles();
@@ -282,11 +283,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openDriveDetailsModal() {
         const activeDrive = getActiveDrive();
-        if (settingsDriveTitle) {
-            settingsDriveTitle.textContent = activeDrive.isAuthenticated ? (activeDrive.chatTitle || 'Connected Drive') : 'No Drive Connected';
-        }
-        if (settingsDriveChatId) {
-            settingsDriveChatId.textContent = activeDrive.chatId ? `Chat ID: ${activeDrive.chatId}` : '-';
+        const settingsConnectSection = document.getElementById('settingsConnectSection');
+        const settingsConnectedSection = document.getElementById('settingsConnectedSection');
+        const settingsModalHeaderTitle = document.getElementById('settingsModalHeaderTitle');
+
+        if (activeDrive && activeDrive.isAuthenticated) {
+            if (settingsModalHeaderTitle) settingsModalHeaderTitle.textContent = 'Connected Drive Details';
+            if (settingsConnectSection) settingsConnectSection.style.display = 'none';
+            if (settingsConnectedSection) settingsConnectedSection.style.display = 'block';
+            if (settingsDriveTitle) settingsDriveTitle.textContent = activeDrive.chatTitle || 'Connected Drive';
+            if (settingsDriveChatId) settingsDriveChatId.textContent = activeDrive.chatId ? `Chat ID: ${activeDrive.chatId}` : '-';
+        } else {
+            if (settingsModalHeaderTitle) settingsModalHeaderTitle.textContent = 'Connect R Cloud Drive';
+            if (settingsConnectSection) settingsConnectSection.style.display = 'block';
+            if (settingsConnectedSection) settingsConnectedSection.style.display = 'none';
         }
         if (settingsModal) settingsModal.classList.add('active');
     }
@@ -317,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         disconnectDriveBtn.addEventListener('click', () => {
             universalDrive.logout();
             drive.logout();
-            alert('Disconnected from Cloud Drive.');
+            alert('✅ Fresh Logout completed! Disconnected from Cloud Drive.');
             if (settingsModal) settingsModal.classList.remove('active');
             updateAuthStatus();
             renderFiles();
