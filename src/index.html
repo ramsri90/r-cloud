@@ -130,9 +130,16 @@
                     Log in instantly with Telegram. No OTP code, SMS, or QR code needed!
                 </p>
                 <div id="telegramWidgetContainer" style="display: flex; justify-content: center; min-height: 48px;">
-                    <a href="https://t.me/RCloudDriveBot?start=auth" target="_blank" class="btn btn-primary" style="gap: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.42.53-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.03-.75 4.04-1.76 6.74-2.92 8.09-3.48 3.85-1.6 4.64-1.88 5.17-1.89.11 0 .37.03.54.17.14.12.18.28.2.45-.01.07.01.21 0 .34z"/></svg>
-                        Log in with Telegram
+                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                            data-telegram-login="RCloud69Drive_bot" 
+                            data-size="large" 
+                            data-radius="10" 
+                            data-onauth="onTelegramAuth(user)" 
+                            data-request-access="write"></script>
+                </div>
+                <div style="margin-top: 12px;">
+                    <a href="https://t.me/RCloud69Drive_bot?start=auth" target="_blank" style="color: var(--accent); font-size: 13px; text-decoration: none;">
+                        Open @RCloud69Drive_bot directly in Telegram ➔
                     </a>
                 </div>
             </div>
