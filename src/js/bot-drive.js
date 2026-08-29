@@ -98,18 +98,21 @@ class UniversalBotDrive {
                 if (xhr.status === 200) {
                     try {
                         const res = JSON.parse(xhr.responseText);
-                        if (res.ok && res.result.document) {
-                            const doc = res.result.document;
-                            const downloadUrl = await this.getFileDownloadUrl(doc.file_id);
+                        if (res.ok && res.result) {
+                            const mediaObj = res.result.document || res.result.video || res.result.audio || (res.result.photo && res.result.photo[res.result.photo.length - 1]);
+                            const fileId = mediaObj ? mediaObj.file_id : null;
+                            const downloadUrl = fileId ? await this.getFileDownloadUrl(fileId) : '';
+                            const localBlobUrl = URL.createObjectURL(file);
                             
                             const newFile = {
                                 id: 'file_' + Date.now(),
-                                fileId: doc.file_id,
+                                fileId: fileId || '',
                                 name: file.name,
                                 size: file.size,
-                                type: file.type,
+                                type: file.type || 'application/octet-stream',
                                 date: new Date().toLocaleDateString(),
-                                url: downloadUrl || URL.createObjectURL(file),
+                                url: downloadUrl || localBlobUrl,
+                                localUrl: localBlobUrl,
                                 category: this.detectCategory(file.type, file.name)
                             };
 
@@ -188,6 +191,13 @@ class UniversalBotDrive {
                             name: post.video.file_name || `video_${post.video.file_id.slice(-6)}.mp4`,
                             size: post.video.file_size || 0,
                             mimeType: post.video.mime_type || 'video/mp4'
+                        };
+                    } else if (post.audio) {
+                        fileObj = {
+                            fileId: post.audio.file_id,
+                            name: post.audio.file_name || `audio_${post.audio.file_id.slice(-6)}.mp3`,
+                            size: post.audio.file_size || 0,
+                            mimeType: post.audio.mime_type || 'audio/mpeg'
                         };
                     }
 
