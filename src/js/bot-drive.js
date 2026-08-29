@@ -25,8 +25,12 @@ class UniversalBotDrive {
     // Validate Chat ID & Connect
     async connectChatId(chatId, customToken = '') {
         if (customToken) {
-            this.botToken = customToken;
-            localStorage.setItem('rc_bot_token', customToken);
+            this.botToken = customToken.trim();
+            localStorage.setItem('rc_bot_token', this.botToken);
+        }
+
+        if (!this.botToken) {
+            throw new Error('Please enter your Bot Token from @BotFather');
         }
 
         let cleanChatId = chatId.trim();
@@ -51,7 +55,7 @@ class UniversalBotDrive {
             let data = await res.json();
 
             if (!data.ok) {
-                throw new Error(data.description || 'Could not connect to Chat ID. Make sure @vivekrambot is added as Admin to your channel/group.');
+                throw new Error(data.description || 'Could not connect. Make sure your bot is added as Admin to your Telegram Channel/Group.');
             }
 
             this.chatId = cleanChatId;

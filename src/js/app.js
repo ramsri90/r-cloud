@@ -213,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectChatIdBtn.addEventListener('click', async () => {
             const chatId = chatIdInput ? chatIdInput.value : '';
             const botToken = document.getElementById('botTokenInput') ? document.getElementById('botTokenInput').value : '';
+            if (!botToken && !universalDrive.botToken) return alert('Please enter your Bot Token from @BotFather');
             if (!chatId) return alert('Please enter your Telegram Channel / Group Chat ID');
             
             try {

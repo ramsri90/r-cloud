@@ -129,17 +129,21 @@
             <!-- Chat ID Connect Section -->
             <div id="chatIdSection">
                 <div style="background: rgba(101, 222, 105, 0.05); border: 1px solid rgba(101, 222, 105, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 18px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
-                    <strong style="color: var(--accent);">⚡ How to connect your Channel:</strong>
+                    <strong style="color: var(--accent);">⚡ Connect Your Individual Drive:</strong>
                     <ol style="margin-left: 18px; margin-top: 6px;">
-                        <li>Create a private Telegram Channel or Group.</li>
-                        <li>Add <strong>@vivekrambot</strong> as an Admin.</li>
-                        <li>Enter your <strong>Channel Chat ID</strong>.</li>
+                        <li>Create your bot via <strong>@BotFather</strong> on Telegram.</li>
+                        <li>Create a private Telegram Channel / Group and add your bot as <strong>Admin</strong>.</li>
+                        <li>Enter your <strong>Bot Token</strong> and <strong>Channel Chat ID</strong> below.</li>
                     </ol>
                 </div>
 
                 <div class="form-group">
+                    <label>Bot Token (From @BotFather)</label>
+                    <input type="text" id="botTokenInput" class="form-input" placeholder="Paste your Bot Token (e.g. 7890123456:AAFx...)">
+                </div>
+                <div class="form-group">
                     <label>Telegram Channel / Group Chat ID</label>
-                    <input type="text" id="chatIdInput" class="form-input" placeholder="Enter your Channel Chat ID">
+                    <input type="text" id="chatIdInput" class="form-input" placeholder="Enter your Channel Chat ID (e.g. -100192837482)">
                 </div>
                 <button class="btn btn-primary" id="connectChatIdBtn" style="width: 100%;">Connect My Cloud Drive</button>
             </div>
