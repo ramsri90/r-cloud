@@ -142,7 +142,7 @@
         async function checkForUpdates() {
             try {
                 const currentVersion = "2.0.0";
-                const response = await fetch('https://raw.githubusercontent.com/inulute/unlim-cloud/main/package.json');
+                const response = await fetch('https://raw.githubusercontent.com/ramsri90/r-cloud/main/package.json');
                 const { version: latestVersion } = await response.json();
 
                 if (compareVersions(latestVersion, currentVersion) === 1) {
@@ -157,7 +157,7 @@
                     
                     // Listen for button click to redirect to GitHub
                     document.getElementById("updateButton").addEventListener("click", function() {
-                        window.location.href = "https://github.com/inulute/unlim-cloud/releases/latest";
+                        window.location.href = "https://github.com/ramsri90/r-cloud/releases/latest";
                     });
 
                     // Listen for "Remind Me Later" button click to redirect to donate page
