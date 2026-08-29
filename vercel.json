@@ -1,7 +1,6 @@
 {
   "version": 2,
   "name": "r-cloud",
-  "public": true,
   "outputDirectory": "src",
   "routes": [
     {
