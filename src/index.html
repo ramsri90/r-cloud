@@ -233,6 +233,24 @@
         </div>
     </div>
 
+    <!-- Media Viewer / Lightbox Modal -->
+    <div class="modal-overlay" id="mediaViewerModal" style="z-index: 100000;">
+        <div class="modal-card" style="width: 840px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; padding: 24px; background: rgba(15, 20, 16, 0.95); backdrop-filter: blur(20px); border: 1px solid var(--border-glow);">
+            <div class="modal-header" style="margin-bottom: 16px;">
+                <h3 id="mediaViewerTitle" style="font-size: 16px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">Media Viewer</h3>
+                <button class="btn-close" id="closeMediaViewerBtn">&times;</button>
+            </div>
+            <div id="mediaViewerBody" style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 12px; background: rgba(0,0,0,0.6); min-height: 350px; padding: 12px;">
+                <!-- Dynamic Content injected via app.js -->
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+                <a id="mediaViewerDownloadBtn" href="#" download class="btn btn-primary" style="text-decoration: none;">
+                    ⬇️ Download File
+                </a>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/bot-drive.js"></script>
     <script src="/js/telegram.js"></script>
     <script src="/js/app.js"></script>
