@@ -150,6 +150,81 @@ class UniversalBotDrive {
         return null;
     }
 
+    // Fetch Updates / Channel Files from Telegram Bot API
+    async syncChannelFiles() {
+        if (!this.chatId || !this.botToken) return this.files;
+
+        try {
+            const res = await fetch(this.getApiUrl('getUpdates'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ allowed_updates: ['channel_post', 'message'] })
+            });
+            const data = await res.json();
+            if (data.ok && Array.isArray(data.result)) {
+                for (const update of data.result) {
+                    const post = update.channel_post || update.message;
+                    if (!post || String(post.chat.id) !== String(this.chatId)) continue;
+
+                    let fileObj = null;
+                    if (post.document) {
+                        fileObj = {
+                            fileId: post.document.file_id,
+                            name: post.document.file_name || `document_${post.document.file_id.slice(-6)}`,
+                            size: post.document.file_size || 0,
+                            mimeType: post.document.mime_type || 'application/octet-stream'
+                        };
+                    } else if (post.photo && post.photo.length > 0) {
+                        const largestPhoto = post.photo[post.photo.length - 1];
+                        fileObj = {
+                            fileId: largestPhoto.file_id,
+                            name: `photo_${largestPhoto.file_id.slice(-6)}.jpg`,
+                            size: largestPhoto.file_size || 0,
+                            mimeType: 'image/jpeg'
+                        };
+                    } else if (post.video) {
+                        fileObj = {
+                            fileId: post.video.file_id,
+                            name: post.video.file_name || `video_${post.video.file_id.slice(-6)}.mp4`,
+                            size: post.video.file_size || 0,
+                            mimeType: post.video.mime_type || 'video/mp4'
+                        };
+                    }
+
+                    if (fileObj) {
+                        const exists = this.files.some(f => f.fileId === fileObj.fileId);
+                        if (!exists) {
+                            const downloadUrl = await this.getFileDownloadUrl(fileObj.fileId);
+                            const newFile = {
+                                id: 'tg_' + fileObj.fileId,
+                                fileId: fileObj.fileId,
+                                name: fileObj.name,
+                                size: fileObj.size,
+                                type: fileObj.mimeType,
+                                date: new Date(post.date * 1000).toLocaleDateString(),
+                                url: downloadUrl || '',
+                                category: this.detectCategory(fileObj.mimeType)
+                            };
+                            this.files.unshift(newFile);
+                        }
+                    }
+                }
+                localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
+            }
+        } catch (e) {
+            console.warn('[R Cloud] syncChannelFiles error:', e);
+        }
+
+        // Refresh URLs for existing files if missing
+        for (const file of this.files) {
+            if (file.fileId && !file.url) {
+                file.url = await this.getFileDownloadUrl(file.fileId);
+            }
+        }
+        localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
+        return this.files;
+    }
+
     detectCategory(mimeType) {
         if (mimeType.startsWith('image/')) return 'images';
         if (mimeType.startsWith('video/')) return 'videos';

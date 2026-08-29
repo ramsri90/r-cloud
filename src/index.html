@@ -162,22 +162,28 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
+    <!-- Settings / Drive Details Modal -->
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>Cloud Drive Settings</h3>
+                <h3>Connected Drive Details</h3>
                 <button class="btn-close">&times;</button>
             </div>
             <div id="driveSettingsContent" style="padding: 10px 0;">
-                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-                    Manage your connected Telegram Bot & Channel storage session.
-                </p>
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: var(--text-muted);">Current Connected Drive</div>
-                    <div id="settingsDriveTitle" style="font-size: 15px; font-weight: 600; color: var(--text-main); margin-top: 4px;">No Drive Connected</div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Connected Storage Channel</div>
+                    <div id="settingsDriveTitle" style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-top: 4px;">No Drive Connected</div>
+                    <div id="settingsDriveChatId" style="font-size: 12px; font-family: monospace; color: var(--accent); margin-top: 4px;">-</div>
                 </div>
-                <button class="btn btn-primary" id="disconnectDriveBtn" style="width: 100%; background: #ff4757; color: white;">Disconnect Drive</button>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-secondary" id="syncFilesBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        🔄 Fetch Previous Files from Channel
+                    </button>
+                    <button class="btn btn-primary" id="disconnectDriveBtn" style="width: 100%; background: #ff4757; color: white;">
+                        🚪 Disconnect Drive
+                    </button>
+                </div>
             </div>
         </div>
     </div>

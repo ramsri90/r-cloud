@@ -173,16 +173,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Auth Button
+    // Auth / Drive Status Badge Button
     const loginTriggerBtn = document.getElementById('loginTriggerBtn');
     if (loginTriggerBtn) {
         loginTriggerBtn.addEventListener('click', () => {
-            if (drive.isAuthenticated) {
-                if (confirm('Logout of R Cloud?')) {
-                    drive.logout();
-                    updateAuthStatus();
-                    renderFiles();
-                }
+            const activeDrive = getActiveDrive();
+            if (activeDrive && activeDrive.isAuthenticated) {
+                openDriveDetailsModal();
             } else {
                 loginModal.classList.add('active');
             }
@@ -276,18 +273,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Settings Modal
+    // Settings / Drive Details Modal
     const settingsBtn = document.getElementById('settingsBtn');
     const disconnectDriveBtn = document.getElementById('disconnectDriveBtn');
+    const syncFilesBtn = document.getElementById('syncFilesBtn');
     const settingsDriveTitle = document.getElementById('settingsDriveTitle');
+    const settingsDriveChatId = document.getElementById('settingsDriveChatId');
+
+    function openDriveDetailsModal() {
+        const activeDrive = getActiveDrive();
+        if (settingsDriveTitle) {
+            settingsDriveTitle.textContent = activeDrive.isAuthenticated ? (activeDrive.chatTitle || 'Connected Drive') : 'No Drive Connected';
+        }
+        if (settingsDriveChatId) {
+            settingsDriveChatId.textContent = activeDrive.chatId ? `Chat ID: ${activeDrive.chatId}` : '-';
+        }
+        if (settingsModal) settingsModal.classList.add('active');
+    }
 
     if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-            const activeDrive = getActiveDrive();
-            if (settingsDriveTitle) {
-                settingsDriveTitle.textContent = activeDrive.isAuthenticated ? (activeDrive.chatTitle || 'Connected Drive') : 'No Drive Connected';
+        settingsBtn.addEventListener('click', openDriveDetailsModal);
+    }
+
+    if (syncFilesBtn) {
+        syncFilesBtn.addEventListener('click', async () => {
+            try {
+                syncFilesBtn.disabled = true;
+                syncFilesBtn.textContent = '⏳ Fetching Previous Files...';
+                await universalDrive.syncChannelFiles();
+                renderFiles();
+                updateStorageUsage();
+                alert('✅ Channel files synced successfully!');
+            } catch (e) {
+                alert('Sync Error: ' + e.message);
+            } finally {
+                syncFilesBtn.disabled = false;
+                syncFilesBtn.textContent = '🔄 Fetch Previous Files from Channel';
             }
-            if (settingsModal) settingsModal.classList.add('active');
         });
     }
 
@@ -343,8 +365,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Initial Setup
+    // Initial Setup & Sync
     updateAuthStatus();
     renderFiles();
     updateStorageUsage();
+
+    if (universalDrive && universalDrive.isAuthenticated) {
+        universalDrive.syncChannelFiles().then(() => {
+            renderFiles();
+            updateStorageUsage();
+        });
+    }
 });
