@@ -239,8 +239,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings Modal
     const settingsBtn = document.getElementById('settingsBtn');
+    const saveApiBtn = document.getElementById('saveApiBtn');
     if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+        settingsBtn.addEventListener('click', () => {
+            document.getElementById('customApiId').value = drive.apiId || '';
+            document.getElementById('customApiHash').value = drive.apiHash || '';
+            settingsModal.classList.add('active');
+        });
+    }
+
+    if (saveApiBtn) {
+        saveApiBtn.addEventListener('click', () => {
+            const apiId = document.getElementById('customApiId').value.trim();
+            const apiHash = document.getElementById('customApiHash').value.trim();
+            if (!apiId || !apiHash) return alert('Please enter both API ID and API Hash');
+            drive.saveCustomKeys(apiId, apiHash);
+            alert('✅ API Credentials Saved! You can now log in via Mobile OTP.');
+            if (settingsModal) settingsModal.classList.remove('active');
+        });
     }
 
     document.querySelectorAll('.btn-close').forEach(btn => {
