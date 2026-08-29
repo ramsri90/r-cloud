@@ -113,49 +113,46 @@
         </main>
     </div>
 
-    <!-- Login Modal -->
+    <!-- Connect Drive Modal -->
     <div class="modal-overlay" id="loginModal">
-        <div class="modal-card">
+        <div class="modal-card" style="width: 480px;">
             <div class="modal-header">
-                <h3>Log In to R Cloud</h3>
+                <h3>Connect R Cloud Drive</h3>
                 <button class="btn-close">&times;</button>
             </div>
             
             <div class="tab-group" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px;">
-                <button class="tab-btn active" id="tabBotBtn">🤖 1-Tap Telegram</button>
-                <button class="tab-btn" id="tabPhoneBtn">📱 Mobile OTP</button>
+                <button class="tab-btn active" id="tabChatIdBtn">🌐 Channel Chat ID</button>
+                <button class="tab-btn" id="tabBotBtn">🤖 1-Tap Mini App</button>
             </div>
 
-            <!-- Bot 1-Tap Login Section -->
-            <div id="botLoginSection" style="text-align: center; padding: 12px 0;">
+            <!-- Chat ID Connect Section -->
+            <div id="chatIdSection">
+                <div style="background: rgba(101, 222, 105, 0.05); border: 1px solid rgba(101, 222, 105, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 18px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+                    <strong style="color: var(--accent);">⚡ How to connect your Channel:</strong>
+                    <ol style="margin-left: 18px; margin-top: 6px;">
+                        <li>Create a private Telegram Channel or Group.</li>
+                        <li>Add <strong>@RCloud69Drive_bot</strong> as an Admin.</li>
+                        <li>Enter your <strong>Channel Chat ID</strong> (e.g. <code>-100198273645</code>).</li>
+                    </ol>
+                </div>
+
+                <div class="form-group">
+                    <label>Telegram Channel / Group Chat ID</label>
+                    <input type="text" id="chatIdInput" class="form-input" placeholder="e.g. -100192837482 or User ID">
+                </div>
+                <button class="btn btn-primary" id="connectChatIdBtn" style="width: 100%;">Connect My Cloud Drive</button>
+            </div>
+
+            <!-- Bot 1-Tap Mini App Section -->
+            <div id="botLoginSection" style="display: none; text-align: center; padding: 12px 0;">
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.4;">
-                    Log in instantly with Telegram. No OTP code, SMS, or QR code needed!
+                    Open R Cloud directly inside Telegram as a 1-Tap Mini App!
                 </p>
                 <div id="telegramWidgetContainer" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                     <a href="https://t.me/RCloud69Drive_bot/appp" target="_blank" class="btn btn-primary" style="width: 100%; text-decoration: none;">
                         🚀 Open R Cloud 1-Tap App
                     </a>
-                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
-                            data-telegram-login="RCloud69Drive_bot" 
-                            data-size="large" 
-                            data-radius="10" 
-                            data-onauth="onTelegramAuth(user)" 
-                            data-request-access="write"></script>
-                </div>
-            </div>
-
-            <!-- Mobile OTP Section -->
-            <div id="phoneLoginSection" style="display: none;">
-                <div class="form-group" id="phoneInputGroup">
-                    <label>Mobile Number</label>
-                    <input type="tel" id="phoneNumInput" class="form-input" placeholder="+91 98765 43210">
-                    <button class="btn btn-primary" id="sendPhoneBtn" style="margin-top: 16px; width: 100%;">Send Code</button>
-                </div>
-
-                <div class="form-group" id="codeInputGroup" style="display: none;">
-                    <label>Telegram Login OTP Code</label>
-                    <input type="text" id="otpCodeInput" class="form-input" placeholder="Enter 5-digit code">
-                    <button class="btn btn-primary" id="verifyCodeBtn" style="margin-top: 16px; width: 100%;">Verify & Log In</button>
                 </div>
             </div>
         </div>
@@ -183,6 +180,7 @@
         </div>
     </div>
 
+    <script src="/js/bot-drive.js"></script>
     <script src="/js/telegram.js"></script>
     <script src="/js/app.js"></script>
 </body>

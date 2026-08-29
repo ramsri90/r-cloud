@@ -2,6 +2,7 @@
  * R Cloud Main App UI Controller
  */
 document.addEventListener('DOMContentLoaded', () => {
+    const universalDrive = window.universalDrive;
     const drive = window.telegramDrive;
 
     // DOM Elements
@@ -17,22 +18,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentFilter = 'all';
 
+    function getActiveDrive() {
+        if (universalDrive && universalDrive.isAuthenticated) return universalDrive;
+        return drive;
+    }
+
     // Update Auth Status
     function updateAuthStatus() {
-        if (drive.isAuthenticated && drive.user) {
+        const activeDrive = getActiveDrive();
+        if (activeDrive.isAuthenticated) {
             authStatusBadge.classList.add('online');
-            const displayName = drive.user.firstName || drive.user.username || drive.user.phoneNumber || 'Logged In';
+            const displayName = activeDrive.chatTitle || (activeDrive.user && (activeDrive.user.firstName || activeDrive.user.username)) || 'Connected';
             authStatusBadge.querySelector('.status-text').textContent = displayName;
         } else {
             authStatusBadge.classList.remove('online');
-            authStatusBadge.querySelector('.status-text').textContent = 'Log In';
+            authStatusBadge.querySelector('.status-text').textContent = 'Connect Drive';
         }
     }
 
     // Render Files
     function renderFiles() {
+        const activeDrive = getActiveDrive();
         const searchQuery = searchInput ? searchInput.value : '';
-        const files = drive.getFiles(currentFilter, searchQuery);
+        const files = activeDrive.getFiles(currentFilter, searchQuery);
 
         if (!filesContainer) return;
 
@@ -72,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.dataset.id;
                 if (confirm('Delete this file from R Cloud?')) {
-                    drive.deleteFile(id);
+                    getActiveDrive().deleteFile(id);
                     renderFiles();
                     updateStorageUsage();
                 }
@@ -94,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateStorageUsage() {
-        const files = drive.getFiles('all');
+        const activeDrive = getActiveDrive();
+        const files = activeDrive.getFiles('all');
         const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
         const usedElem = document.getElementById('storageUsed');
         const fillElem = document.getElementById('storageFill');
@@ -105,14 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Upload Handler
     async function handleFilesUpload(filesList) {
-        if (!drive.isAuthenticated) {
+        const activeDrive = getActiveDrive();
+        if (!activeDrive.isAuthenticated) {
             loginModal.classList.add('active');
             return;
         }
 
         for (const file of filesList) {
             try {
-                await drive.uploadFile(file, (pct) => {
+                await activeDrive.uploadFile(file, (pct) => {
                     console.log(`Uploading ${file.name}: ${pct}%`);
                 });
             } catch (err) {
@@ -176,24 +186,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Login Modal Tab Switcher
+    // Login Modal Tab Switcher & Connect Handlers
+    const tabChatIdBtn = document.getElementById('tabChatIdBtn');
     const tabBotBtn = document.getElementById('tabBotBtn');
-    const tabPhoneBtn = document.getElementById('tabPhoneBtn');
+    const chatIdSection = document.getElementById('chatIdSection');
     const botLoginSection = document.getElementById('botLoginSection');
-    const phoneLoginSection = document.getElementById('phoneLoginSection');
+    const connectChatIdBtn = document.getElementById('connectChatIdBtn');
+    const chatIdInput = document.getElementById('chatIdInput');
 
-    if (tabBotBtn && tabPhoneBtn) {
+    if (tabChatIdBtn && tabBotBtn) {
+        tabChatIdBtn.addEventListener('click', () => {
+            tabChatIdBtn.classList.add('active');
+            tabBotBtn.classList.remove('active');
+            chatIdSection.style.display = 'block';
+            botLoginSection.style.display = 'none';
+        });
         tabBotBtn.addEventListener('click', () => {
             tabBotBtn.classList.add('active');
-            tabPhoneBtn.classList.remove('active');
+            tabChatIdBtn.classList.remove('active');
             botLoginSection.style.display = 'block';
-            phoneLoginSection.style.display = 'none';
+            chatIdSection.style.display = 'none';
         });
-        tabPhoneBtn.addEventListener('click', () => {
-            tabPhoneBtn.classList.add('active');
-            tabBotBtn.classList.remove('active');
-            phoneLoginSection.style.display = 'block';
-            botLoginSection.style.display = 'none';
+    }
+
+    if (connectChatIdBtn) {
+        connectChatIdBtn.addEventListener('click', async () => {
+            const chatId = chatIdInput ? chatIdInput.value : '';
+            if (!chatId) return alert('Please enter your Telegram Channel / Group Chat ID');
+            
+            try {
+                connectChatIdBtn.disabled = true;
+                connectChatIdBtn.textContent = 'Connecting...';
+                await universalDrive.connectChatId(chatId);
+                alert(`✅ Successfully connected to "${universalDrive.chatTitle}"!`);
+                if (loginModal) loginModal.classList.remove('active');
+                updateAuthStatus();
+                renderFiles();
+            } catch (err) {
+                alert('Connection Error: ' + err.message);
+            } finally {
+                connectChatIdBtn.disabled = false;
+                connectChatIdBtn.textContent = 'Connect My Cloud Drive';
+            }
         });
     }
 
