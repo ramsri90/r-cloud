@@ -540,6 +540,59 @@ body {
     color: #080b09;
 }
 
+/* General Button Classes */
+.btn {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), #45c449);
+    color: #080b09;
+    box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #52c856, #3eb242);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(101, 222, 105, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff4757, #ff6b81) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3) !important;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #ff6b81, #ff4757) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 71, 87, 0.5) !important;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .sidebar {
