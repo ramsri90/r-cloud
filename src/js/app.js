@@ -115,21 +115,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fillElem) fillElem.style.width = Math.min((totalBytes / (2 * 1024 * 1024 * 1024)) * 100, 100) + '%';
     }
 
-    // Upload Handler
+    // Upload Handler with Real-time Progress Bar Modal
     async function handleFilesUpload(filesList) {
         const activeDrive = getActiveDrive();
         if (!activeDrive.isAuthenticated) {
-            loginModal.classList.add('active');
+            if (settingsModal) settingsModal.classList.add('active');
             return;
         }
 
+        const uploadProgressModal = document.getElementById('uploadProgressModal');
+        const uploadFileName = document.getElementById('uploadFileName');
+        const uploadStatusText = document.getElementById('uploadStatusText');
+        const uploadProgressBarFill = document.getElementById('uploadProgressBarFill');
+        const uploadPercentageText = document.getElementById('uploadPercentageText');
+
         for (const file of filesList) {
             try {
+                if (uploadFileName) uploadFileName.textContent = `Uploading ${file.name}...`;
+                if (uploadStatusText) uploadStatusText.textContent = `File Size: ${formatFileSize(file.size)} • Transferring to Telegram Unlimited Storage`;
+                if (uploadProgressBarFill) uploadProgressBarFill.style.width = '0%';
+                if (uploadPercentageText) uploadPercentageText.textContent = '0%';
+                if (uploadProgressModal) uploadProgressModal.classList.add('active');
+
                 await activeDrive.uploadFile(file, (pct) => {
-                    console.log(`Uploading ${file.name}: ${pct}%`);
+                    if (uploadProgressBarFill) uploadProgressBarFill.style.width = `${pct}%`;
+                    if (uploadPercentageText) uploadPercentageText.textContent = `${pct}%`;
                 });
+
+                if (uploadProgressBarFill) uploadProgressBarFill.style.width = '100%';
+                if (uploadPercentageText) uploadPercentageText.textContent = '100% • Upload Completed! 🎉';
+                await new Promise(r => setTimeout(r, 500));
             } catch (err) {
-                alert('Upload error: ' + err.message);
+                alert('Upload Error: ' + err.message);
+            } finally {
+                if (uploadProgressModal) uploadProgressModal.classList.remove('active');
             }
         }
         renderFiles();
