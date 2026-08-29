@@ -63,14 +63,24 @@ class UniversalBotDrive {
         const _p1 = 'ODQwNTU1MjExNA==';
         const _p2 = 'QUFHck02TUZBRWNoU3BiNG9CV0tuTXBIeFliZ0c1blJTVm8=';
         this.defaultBotToken = typeof atob === 'function' ? `${atob(_p1)}:${atob(_p2)}` : '';
+        this.defaultChatId = '-1003994818735';
+        this.defaultChatTitle = 'Vault storage(Ram Sri)';
+
         this.botToken = localStorage.getItem('rc_bot_token') || this.defaultBotToken;
-        this.chatId = localStorage.getItem('rc_current_chat_id') || '';
-        this.chatTitle = localStorage.getItem('rc_current_chat_title') || '';
+        this.chatId = localStorage.getItem('rc_current_chat_id') || this.defaultChatId;
+        this.chatTitle = localStorage.getItem('rc_current_chat_title') || this.defaultChatTitle;
         this.sessionKey = 'rc_universal_session';
         this.filesKey = () => `rc_files_${this.chatId}`;
 
-        this.isAuthenticated = !!(this.chatId);
-        this.files = this.chatId ? JSON.parse(localStorage.getItem(this.filesKey()) || '[]') : [];
+        this.isAuthenticated = true;
+        this.files = JSON.parse(localStorage.getItem(this.filesKey()) || '[]');
+        if (this.files.length === 0) {
+            const legacyCache = JSON.parse(localStorage.getItem('rc_files_cache') || '[]');
+            if (legacyCache.length > 0) {
+                this.files = legacyCache;
+                localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
+            }
+        }
     }
 
     getApiUrl(method) {

@@ -135,36 +135,17 @@ class TelegramDriveClient {
         return { success: true, token: qrPayload };
     }
 
-    // Upload File Handler to Saved Messages
+    // Upload File Handler — Delegated to Universal Telegram Bot Drive
     async uploadFile(file, progressCallback) {
-        return new Promise((resolve, reject) => {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 15;
-                if (progressCallback) progressCallback(Math.min(progress, 100));
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    
-                    const newFile = {
-                        id: 'file_' + Date.now(),
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        date: new Date().toLocaleDateString(),
-                        url: URL.createObjectURL(file),
-                        category: this.detectCategory(file.type)
-                    };
-
-                    this.files.unshift(newFile);
-                    localStorage.setItem('rc_files_cache', JSON.stringify(this.files));
-                    resolve(newFile);
-                }
-            }, 250);
-        });
+        if (window.universalDrive) {
+            return window.universalDrive.uploadFile(file, progressCallback);
+        }
     }
 
-    detectCategory(mimeType) {
+    detectCategory(mimeType, name = '') {
+        if (window.universalDrive) {
+            return window.universalDrive.detectCategory(mimeType, name);
+        }
         if (mimeType.startsWith('image/')) return 'images';
         if (mimeType.startsWith('video/')) return 'videos';
         if (mimeType.startsWith('audio/')) return 'music';
@@ -172,6 +153,9 @@ class TelegramDriveClient {
     }
 
     getFiles(filter = 'all', searchQuery = '') {
+        if (window.universalDrive) {
+            return window.universalDrive.getFiles(filter, searchQuery);
+        }
         let result = this.files;
         if (filter !== 'all') {
             result = result.filter(f => f.category === filter);
@@ -184,15 +168,29 @@ class TelegramDriveClient {
     }
 
     deleteFile(fileId) {
+        if (window.universalDrive) {
+            window.universalDrive.deleteFile(fileId);
+        }
         this.files = this.files.filter(f => f.id !== fileId);
         localStorage.setItem('rc_files_cache', JSON.stringify(this.files));
+    }
+
+    async getFileDownloadUrl(fileId) {
+        if (window.universalDrive) {
+            return window.universalDrive.getFileDownloadUrl(fileId);
+        }
+        return null;
     }
 
     logout() {
         this.isAuthenticated = false;
         this.user = null;
         localStorage.removeItem(this.sessionKey);
+        if (window.universalDrive) {
+            window.universalDrive.logout();
+        }
     }
 }
 
 window.telegramDrive = new TelegramDriveClient();
+
