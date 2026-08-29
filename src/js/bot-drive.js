@@ -4,7 +4,7 @@
  */
 class UniversalBotDrive {
     constructor() {
-        this.defaultBotToken = '7528394012:AAH9mS2XvP_024J2y_N7X5XyW8-v-a5w-Q8'; // @RCloud69Drive_bot
+        this.defaultBotToken = '8405552114:AAGrM6MFAEchSpb4oBWKnMpHxYbgG5nRSVo'; // @vivekrambot
         this.botToken = localStorage.getItem('rc_bot_token') || this.defaultBotToken;
         this.chatId = localStorage.getItem('rc_current_chat_id') || '';
         this.chatTitle = localStorage.getItem('rc_current_chat_title') || '';
@@ -48,7 +48,7 @@ class UniversalBotDrive {
             let data = await res.json();
 
             if (!data.ok) {
-                throw new Error(data.description || 'Could not connect to Chat ID. Make sure @RCloud69Drive_bot is added as Admin to your channel/group.');
+                throw new Error(data.description || 'Could not connect to Chat ID. Make sure @vivekrambot is added as Admin to your channel/group.');
             }
 
             this.chatId = cleanChatId;
