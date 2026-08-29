@@ -26,8 +26,14 @@ class UniversalBotDrive {
             localStorage.setItem('rc_bot_token', customToken);
         }
 
-        const cleanChatId = chatId.trim();
-        if (!cleanChatId) throw new Error('Please enter a valid Chat ID');
+        let cleanChatId = chatId.trim();
+        if (!cleanChatId) throw new Error('Please enter a valid Chat ID or @username');
+
+        if (!cleanChatId.startsWith('-') && !cleanChatId.startsWith('@')) {
+            if (isNaN(cleanChatId)) {
+                cleanChatId = '@' + cleanChatId;
+            }
+        }
 
         try {
             const res = await fetch(this.getApiUrl('getChat'), {
