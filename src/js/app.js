@@ -1,0 +1,241 @@
+/**
+ * R Cloud Main App UI Controller
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const drive = window.telegramDrive;
+
+    // DOM Elements
+    const filesContainer = document.getElementById('filesContainer');
+    const authStatusBadge = document.getElementById('authStatusBadge');
+    const loginModal = document.getElementById('loginModal');
+    const settingsModal = document.getElementById('settingsModal');
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const searchInput = document.getElementById('searchInput');
+    const filterNavItems = document.querySelectorAll('.nav-item');
+    const currentCategoryTitle = document.getElementById('currentCategoryTitle');
+
+    let currentFilter = 'all';
+
+    // Update Auth Status
+    function updateAuthStatus() {
+        if (drive.isAuthenticated && drive.user) {
+            authStatusBadge.classList.add('online');
+            authStatusBadge.querySelector('.status-text').textContent = drive.user.phoneNumber || drive.user.firstName;
+        } else {
+            authStatusBadge.classList.remove('online');
+            authStatusBadge.querySelector('.status-text').textContent = 'Not Logged In';
+        }
+    }
+
+    // Render Files
+    function renderFiles() {
+        const searchQuery = searchInput ? searchInput.value : '';
+        const files = drive.getFiles(currentFilter, searchQuery);
+
+        if (!filesContainer) return;
+
+        if (files.length === 0) {
+            filesContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    <p style="font-size: 15px;">No files uploaded yet.</p>
+                    <p style="font-size: 13px; margin-top: 4px;">Drag and drop files or click "Upload File" above.</p>
+                </div>
+            `;
+            return;
+        }
+
+        filesContainer.innerHTML = files.map(file => `
+            <div class="file-card">
+                <div class="file-preview">
+                    ${getFilePreviewHTML(file)}
+                </div>
+                <div class="file-info">
+                    <h4 title="${escapeHTML(file.name)}">${escapeHTML(file.name)}</h4>
+                    <p>${formatFileSize(file.size)} • ${file.date}</p>
+                </div>
+                <div class="file-actions">
+                    <a href="${file.url}" download="${escapeHTML(file.name)}" class="btn-icon" title="Download">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </a>
+                    <button class="btn-icon delete-btn" data-id="${file.id}" title="Delete">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        // Attach Delete Listeners
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                if (confirm('Delete this file from R Cloud?')) {
+                    drive.deleteFile(id);
+                    renderFiles();
+                    updateStorageUsage();
+                }
+            });
+        });
+    }
+
+    function getFilePreviewHTML(file) {
+        if (file.category === 'images') {
+            return `<img src="${file.url}" alt="${escapeHTML(file.name)}" loading="lazy">`;
+        }
+        if (file.category === 'videos') {
+            return `<video src="${file.url}" muted preload="metadata"></video>`;
+        }
+        if (file.category === 'music') {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+        }
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+    }
+
+    function updateStorageUsage() {
+        const files = drive.getFiles('all');
+        const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
+        const usedElem = document.getElementById('storageUsed');
+        const fillElem = document.getElementById('storageFill');
+
+        if (usedElem) usedElem.textContent = formatFileSize(totalBytes);
+        if (fillElem) fillElem.style.width = Math.min((totalBytes / (2 * 1024 * 1024 * 1024)) * 100, 100) + '%';
+    }
+
+    // Upload Handler
+    async function handleFilesUpload(filesList) {
+        if (!drive.isAuthenticated) {
+            loginModal.classList.add('active');
+            return;
+        }
+
+        for (const file of filesList) {
+            try {
+                await drive.uploadFile(file, (pct) => {
+                    console.log(`Uploading ${file.name}: ${pct}%`);
+                });
+            } catch (err) {
+                alert('Upload error: ' + err.message);
+            }
+        }
+        renderFiles();
+        updateStorageUsage();
+    }
+
+    // Event Listeners
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => handleFilesUpload(e.target.files));
+    }
+
+    if (dropzone) {
+        dropzone.addEventListener('click', () => fileInput && fileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files) handleFilesUpload(e.dataTransfer.files);
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', renderFiles);
+    }
+
+    // Category Filter Navigation
+    filterNavItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            filterNavItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            currentFilter = item.dataset.filter || 'all';
+            if (currentCategoryTitle) {
+                currentCategoryTitle.textContent = item.querySelector('span').textContent;
+            }
+            renderFiles();
+        });
+    });
+
+    // Auth Button
+    const loginTriggerBtn = document.getElementById('loginTriggerBtn');
+    if (loginTriggerBtn) {
+        loginTriggerBtn.addEventListener('click', () => {
+            if (drive.isAuthenticated) {
+                if (confirm('Logout of R Cloud?')) {
+                    drive.logout();
+                    updateAuthStatus();
+                    renderFiles();
+                }
+            } else {
+                loginModal.classList.add('active');
+            }
+        });
+    }
+
+    // Phone Code Step Handlers
+    const sendPhoneBtn = document.getElementById('sendPhoneBtn');
+    const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+    const phoneInputGroup = document.getElementById('phoneInputGroup');
+    const codeInputGroup = document.getElementById('codeInputGroup');
+    let tempPhone = '';
+    let tempHash = '';
+
+    if (sendPhoneBtn) {
+        sendPhoneBtn.addEventListener('click', async () => {
+            const phone = document.getElementById('phoneNumInput').value;
+            if (!phone) return alert('Please enter phone number');
+            tempPhone = phone;
+            const res = await drive.sendPhoneCode(phone);
+            tempHash = res.phoneCodeHash;
+            phoneInputGroup.style.display = 'none';
+            codeInputGroup.style.display = 'block';
+        });
+    }
+
+    if (verifyCodeBtn) {
+        verifyCodeBtn.addEventListener('click', async () => {
+            const code = document.getElementById('otpCodeInput').value;
+            if (!code) return alert('Please enter 5-digit code');
+            await drive.verifyPhoneCode(tempPhone, code, tempHash);
+            loginModal.classList.remove('active');
+            updateAuthStatus();
+            renderFiles();
+        });
+    }
+
+    // Settings Modal
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    }
+
+    document.querySelectorAll('.btn-close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            loginModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+        });
+    });
+
+    // Utilities
+    function formatFileSize(bytes) {
+        if (!bytes) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    // Initial Setup
+    updateAuthStatus();
+    renderFiles();
+    updateStorageUsage();
+});
