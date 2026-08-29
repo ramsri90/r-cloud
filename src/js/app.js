@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fillElem) fillElem.style.width = Math.min((totalBytes / (2 * 1024 * 1024 * 1024)) * 100, 100) + '%';
     }
 
-    // Upload Handler with Real-time Progress Bar Modal
+    // Upload Handler with Dual Progress Indicators (Central Modal + Top Floating Sticky Banner)
     async function handleFilesUpload(filesList) {
         const activeDrive = getActiveDrive();
         if (!activeDrive.isAuthenticated) {
@@ -129,26 +129,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const uploadProgressBarFill = document.getElementById('uploadProgressBarFill');
         const uploadPercentageText = document.getElementById('uploadPercentageText');
 
+        const topUploadBanner = document.getElementById('topUploadBanner');
+        const topUploadFileName = document.getElementById('topUploadFileName');
+        const topUploadFill = document.getElementById('topUploadFill');
+        const topUploadPct = document.getElementById('topUploadPct');
+
         for (const file of filesList) {
             try {
                 if (uploadFileName) uploadFileName.textContent = `Uploading ${file.name}...`;
                 if (uploadStatusText) uploadStatusText.textContent = `File Size: ${formatFileSize(file.size)} • Transferring to Telegram Unlimited Storage`;
                 if (uploadProgressBarFill) uploadProgressBarFill.style.width = '0%';
                 if (uploadPercentageText) uploadPercentageText.textContent = '0%';
+
+                if (topUploadFileName) topUploadFileName.textContent = file.name;
+                if (topUploadFill) topUploadFill.style.width = '0%';
+                if (topUploadPct) topUploadPct.textContent = '0%';
+
                 if (uploadProgressModal) uploadProgressModal.classList.add('active');
+                if (topUploadBanner) topUploadBanner.style.display = 'flex';
 
                 await activeDrive.uploadFile(file, (pct) => {
                     if (uploadProgressBarFill) uploadProgressBarFill.style.width = `${pct}%`;
                     if (uploadPercentageText) uploadPercentageText.textContent = `${pct}%`;
+                    if (topUploadFill) topUploadFill.style.width = `${pct}%`;
+                    if (topUploadPct) topUploadPct.textContent = `${pct}%`;
                 });
 
                 if (uploadProgressBarFill) uploadProgressBarFill.style.width = '100%';
                 if (uploadPercentageText) uploadPercentageText.textContent = '100% • Upload Completed! 🎉';
-                await new Promise(r => setTimeout(r, 500));
+                if (topUploadFill) topUploadFill.style.width = '100%';
+                if (topUploadPct) topUploadPct.textContent = '100%';
+
+                await new Promise(r => setTimeout(r, 600));
             } catch (err) {
                 alert('Upload Error: ' + err.message);
             } finally {
                 if (uploadProgressModal) uploadProgressModal.classList.remove('active');
+                if (topUploadBanner) topUploadBanner.style.display = 'none';
             }
         }
         renderFiles();
