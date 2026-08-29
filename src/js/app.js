@@ -25,14 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update Auth Status
     function updateAuthStatus() {
+        if (!authStatusBadge) return;
         const activeDrive = getActiveDrive();
-        if (activeDrive.isAuthenticated) {
+        if (activeDrive && activeDrive.isAuthenticated) {
             authStatusBadge.classList.add('online');
             const displayName = activeDrive.chatTitle || (activeDrive.user && (activeDrive.user.firstName || activeDrive.user.username)) || 'Connected';
-            authStatusBadge.querySelector('.status-text').textContent = displayName;
+            const statusText = authStatusBadge.querySelector('.status-text');
+            if (statusText) statusText.textContent = displayName;
         } else {
             authStatusBadge.classList.remove('online');
-            authStatusBadge.querySelector('.status-text').textContent = 'Connect Drive';
+            const statusText = authStatusBadge.querySelector('.status-text');
+            if (statusText) statusText.textContent = 'Connect Drive';
         }
     }
 
@@ -275,23 +278,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings Modal
     const settingsBtn = document.getElementById('settingsBtn');
-    const saveApiBtn = document.getElementById('saveApiBtn');
+    const disconnectDriveBtn = document.getElementById('disconnectDriveBtn');
+    const settingsDriveTitle = document.getElementById('settingsDriveTitle');
+
     if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
-            document.getElementById('customApiId').value = drive.apiId || '';
-            document.getElementById('customApiHash').value = drive.apiHash || '';
-            settingsModal.classList.add('active');
+            const activeDrive = getActiveDrive();
+            if (settingsDriveTitle) {
+                settingsDriveTitle.textContent = activeDrive.isAuthenticated ? (activeDrive.chatTitle || 'Connected Drive') : 'No Drive Connected';
+            }
+            if (settingsModal) settingsModal.classList.add('active');
         });
     }
 
-    if (saveApiBtn) {
-        saveApiBtn.addEventListener('click', () => {
-            const apiId = document.getElementById('customApiId').value.trim();
-            const apiHash = document.getElementById('customApiHash').value.trim();
-            if (!apiId || !apiHash) return alert('Please enter both API ID and API Hash');
-            drive.saveCustomKeys(apiId, apiHash);
-            alert('✅ API Credentials Saved! You can now log in via Mobile OTP.');
+    if (disconnectDriveBtn) {
+        disconnectDriveBtn.addEventListener('click', () => {
+            universalDrive.logout();
+            drive.logout();
+            alert('Disconnected from Cloud Drive.');
             if (settingsModal) settingsModal.classList.remove('active');
+            updateAuthStatus();
+            renderFiles();
         });
     }
 
