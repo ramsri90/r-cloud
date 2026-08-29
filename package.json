@@ -1,0 +1,19 @@
+{
+  "name": "r-cloud",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "start": "npx serve src/",
+    "tauri": "tauri",
+    "rls": "tauri build",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build",
+    "deploy": "npx vercel src/ --prod"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

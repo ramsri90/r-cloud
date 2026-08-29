@@ -1,0 +1,24 @@
+{
+  "name": "R Cloud",
+  "short_name": "R Cloud",
+  "description": "R Cloud - Your cloud companion app",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#65de69",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/unlim-clear.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/unlim-clear.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

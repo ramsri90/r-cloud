@@ -1,0 +1,8 @@
+src-tauri/
+vendor/
+node_modules/
+.pkgconfig-shims/
+.git/
+.nvmrc
+yarn.lock
+package-lock.json
