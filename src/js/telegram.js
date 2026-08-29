@@ -3,8 +3,8 @@
  */
 class TelegramDriveClient {
     constructor() {
-        this.apiId = localStorage.getItem('rc_api_id') || '2040';
-        this.apiHash = localStorage.getItem('rc_api_hash') || 'b184454125e713d388231a47732c363c';
+        this.apiId = localStorage.getItem('rc_api_id') || '35170111';
+        this.apiHash = localStorage.getItem('rc_api_hash') || '1af1dc5ee35a3dbc842b6d40918b1653';
         this.sessionKey = 'rc_telegram_session';
         this.isAuthenticated = false;
         this.user = null;
