@@ -143,6 +143,18 @@
             transform: translateY(-2px);
         }
 
+        .btn-danger {
+            background: rgba(255, 74, 74, 0.1);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 74, 74, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 74, 74, 0.2);
+            border-color: rgba(255, 74, 74, 0.5);
+            transform: translateY(-2px);
+        }
+
         .pwa-banner {
             background: rgba(101, 222, 105, 0.06);
             border: 1px dashed rgba(101, 222, 105, 0.3);
@@ -202,6 +214,10 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download Desktop App
             </a>
+            <button class="btn btn-danger" id="logoutBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Logout / Reset Session
+            </button>
         </div>
 
         <div class="pwa-banner">
@@ -220,13 +236,24 @@
             window.location.href = "https://unlim-cloud.web.app";
         }
 
-        // Register Service Worker for PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .catch(err => console.warn('SW registration failed:', err));
-            });
-        }
+        // Logout & Session Reset handler
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            if (confirm("Logout of R Cloud and reset saved session?")) {
+                try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    if (indexedDB && indexedDB.databases) {
+                        indexedDB.databases().then(dbs => {
+                            dbs.forEach(db => indexedDB.deleteDatabase(db.name));
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Storage clear notice:", e);
+                }
+                // Redirect to fresh login
+                window.location.href = "https://unlim-cloud.web.app";
+            }
+        });
     </script>
 </body>
 </html>
