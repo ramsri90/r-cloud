@@ -212,12 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (connectChatIdBtn) {
         connectChatIdBtn.addEventListener('click', async () => {
             const chatId = chatIdInput ? chatIdInput.value : '';
+            const botToken = document.getElementById('botTokenInput') ? document.getElementById('botTokenInput').value : '';
             if (!chatId) return alert('Please enter your Telegram Channel / Group Chat ID');
             
             try {
                 connectChatIdBtn.disabled = true;
                 connectChatIdBtn.textContent = 'Connecting...';
-                await universalDrive.connectChatId(chatId);
+                await universalDrive.connectChatId(chatId, botToken);
                 alert(`✅ Successfully connected to "${universalDrive.chatTitle}"!`);
                 if (loginModal) loginModal.classList.remove('active');
                 updateAuthStatus();

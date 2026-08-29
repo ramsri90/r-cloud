@@ -29,6 +29,15 @@ class UniversalBotDrive {
         let cleanChatId = chatId.trim();
         if (!cleanChatId) throw new Error('Please enter a valid Chat ID');
 
+        // Normalize Chat ID (e.g. 1003994818735 or 3994818735 -> -1003994818735)
+        if (!cleanChatId.startsWith('@')) {
+            if (cleanChatId.startsWith('100')) {
+                cleanChatId = '-' + cleanChatId;
+            } else if (!cleanChatId.startsWith('-')) {
+                cleanChatId = '-100' + cleanChatId;
+            }
+        }
+
         try {
             let res = await fetch(this.getApiUrl('getChat'), {
                 method: 'POST',
@@ -37,21 +46,6 @@ class UniversalBotDrive {
             });
 
             let data = await res.json();
-            
-            // Auto fallback for Telegram Web IDs (e.g. 52504489 -> -10052504489)
-            if (!data.ok && !cleanChatId.startsWith('-100') && !cleanChatId.startsWith('@')) {
-                const prefixedId = `-100${cleanChatId}`;
-                const res2 = await fetch(this.getApiUrl('getChat'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: prefixedId })
-                });
-                const data2 = await res2.json();
-                if (data2.ok) {
-                    data = data2;
-                    cleanChatId = prefixedId;
-                }
-            }
 
             if (!data.ok) {
                 throw new Error(data.description || 'Could not connect to Chat ID. Make sure @RCloud69Drive_bot is added as Admin to your channel/group.');
