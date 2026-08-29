@@ -121,17 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
     }
 
-    window.openMediaViewer = async function(fileId) {
+    window.openMediaViewer = function(fileId) {
         const activeDrive = getActiveDrive();
         const files = activeDrive.getFiles('all');
         const file = files.find(f => f.id === fileId);
         if (!file) return;
-
-        // Fresh URL check to prevent expired Telegram links
-        if (file.fileId && activeDrive.getFileDownloadUrl) {
-            const freshUrl = await activeDrive.getFileDownloadUrl(file.fileId);
-            if (freshUrl) file.url = freshUrl;
-        }
 
         const modal = document.getElementById('mediaViewerModal');
         const title = document.getElementById('mediaViewerTitle');
@@ -139,33 +133,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const downloadBtn = document.getElementById('mediaViewerDownloadBtn');
 
         if (title) title.textContent = file.name;
+
+        const mediaSrc = file.url || file.localUrl || '#';
         if (downloadBtn) {
-            downloadBtn.href = file.url;
+            downloadBtn.href = mediaSrc;
             downloadBtn.setAttribute('download', file.name);
         }
 
         if (file.category === 'images') {
-            body.innerHTML = `<img src="${file.url}" alt="${escapeHTML(file.name)}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;">`;
+            body.innerHTML = `<img id="mediaElement" src="${mediaSrc}" alt="${escapeHTML(file.name)}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;">`;
         } else if (file.category === 'videos') {
-            body.innerHTML = `<video src="${file.url}" controls autoplay style="max-width: 100%; max-height: 70vh; border-radius: 8px; outline: none;"></video>`;
+            body.innerHTML = `<video id="mediaElement" src="${mediaSrc}" controls autoplay style="max-width: 100%; max-height: 70vh; border-radius: 8px; outline: none;"></video>`;
         } else if (file.category === 'music') {
             body.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 30px;">
                     <div style="width: 80px; height: 80px; background: rgba(101,222,105,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px var(--accent-glow);">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                     </div>
-                    <audio src="${file.url}" controls autoplay style="width: 320px; outline: none;"></audio>
+                    <audio id="mediaElement" src="${mediaSrc}" controls autoplay style="width: 320px; outline: none;"></audio>
                 </div>`;
         } else {
             body.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px; text-align: center;">
                     <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                     <p style="font-size: 14px; color: var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
-                    <a href="${file.url}" target="_blank" class="btn btn-secondary" style="text-decoration: none;">🔗 Open Document in New Tab</a>
+                    <a href="${mediaSrc}" target="_blank" class="btn btn-secondary" style="text-decoration: none;">🔗 Open Document in New Tab</a>
                 </div>`;
         }
 
+        // Open modal INSTANTLY (0ms latency, zero freeze!)
         if (modal) modal.classList.add('active');
+
+        // Non-blocking background URL refresh if fileId exists
+        if (file.fileId && activeDrive.getFileDownloadUrl) {
+            activeDrive.getFileDownloadUrl(file.fileId).then(freshUrl => {
+                if (freshUrl && freshUrl !== file.url) {
+                    file.url = freshUrl;
+                    const mediaElement = document.getElementById('mediaElement');
+                    if (mediaElement) mediaElement.src = freshUrl;
+                    if (downloadBtn) downloadBtn.href = freshUrl;
+                }
+            }).catch(err => console.warn('URL refresh error:', err));
+        }
     };
 
     const closeMediaViewerBtn = document.getElementById('closeMediaViewerBtn');
