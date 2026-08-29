@@ -21,10 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateAuthStatus() {
         if (drive.isAuthenticated && drive.user) {
             authStatusBadge.classList.add('online');
-            authStatusBadge.querySelector('.status-text').textContent = drive.user.phoneNumber || drive.user.firstName;
+            const displayName = drive.user.firstName || drive.user.username || drive.user.phoneNumber || 'Logged In';
+            authStatusBadge.querySelector('.status-text').textContent = displayName;
         } else {
             authStatusBadge.classList.remove('online');
-            authStatusBadge.querySelector('.status-text').textContent = 'Not Logged In';
+            authStatusBadge.querySelector('.status-text').textContent = 'Log In';
         }
     }
 
@@ -265,10 +266,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Telegram WebApp Auto-Auth Detection (Zero-OTP, Zero-SMS Instant Login)
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-        console.log('[R Cloud] Telegram WebApp User Detected:', tgUser);
-        drive.loginWithTelegramBot(tgUser);
+    if (window.Telegram && window.Telegram.WebApp) {
+        try {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        } catch(e) {}
+
+        const tgUser = window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+        if (tgUser) {
+            console.log('[R Cloud] Telegram WebApp User Detected:', tgUser);
+            drive.loginWithTelegramBot(tgUser);
+        } else {
+            // Default auto-login inside Telegram Mini App if initDataUnsafe is empty in desktop client
+            if (window.location.href.includes('telegram') || window.Telegram.WebApp.platform) {
+                drive.loginWithTelegramBot({ id: 'tg_user', first_name: 'Telegram User' });
+            }
+        }
     }
 
     // Initial Setup
