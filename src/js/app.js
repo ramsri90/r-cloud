@@ -264,6 +264,13 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
+    // Telegram WebApp Auto-Auth Detection (Zero-OTP, Zero-SMS Instant Login)
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        console.log('[R Cloud] Telegram WebApp User Detected:', tgUser);
+        drive.loginWithTelegramBot(tgUser);
+    }
+
     // Initial Setup
     updateAuthStatus();
     renderFiles();
