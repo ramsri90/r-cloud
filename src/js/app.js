@@ -146,68 +146,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openMediaViewerById(fileId) {
         const file = getFileById(fileId);
-        if (!file) { console.warn('openMediaViewer: file not found', fileId); return; }
+        if (!file) { console.warn('[Viewer] file not found:', fileId); return; }
 
         const modal = document.getElementById('mediaViewerModal');
         const titleEl = document.getElementById('mediaViewerTitle');
         const body = document.getElementById('mediaViewerBody');
         const downloadBtn = document.getElementById('mediaViewerDownloadBtn');
 
-        if (!modal || !body) { console.warn('openMediaViewer: modal elements missing'); return; }
+        if (!modal || !body) return;
 
-        const mediaSrc = file.url || file.localUrl || '';
+        // Show modal immediately with a loading spinner
         if (titleEl) titleEl.textContent = file.name;
-        if (downloadBtn) {
-            downloadBtn.href = mediaSrc || '#';
-            downloadBtn.setAttribute('download', file.name);
-        }
-
-        if (file.category === 'images') {
-            body.innerHTML = `<img id="mediaElement" src="${mediaSrc}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">`;
-        } else if (file.category === 'videos') {
-            body.innerHTML = `<video id="mediaElement" src="${mediaSrc}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
-        } else if (file.category === 'music') {
-            body.innerHTML = `
-                <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px;">
-                    <div style="width:80px;height:80px;background:rgba(101,222,105,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--accent-glow);">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                    </div>
-                    <audio id="mediaElement" src="${mediaSrc}" controls autoplay style="width:320px;outline:none;"></audio>
-                </div>`;
-        } else {
-            body.innerHTML = `
-                <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
-                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
-                    <a href="${mediaSrc || '#'}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
-                </div>`;
-        }
-
+        body.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px;color:var(--text-secondary);">
+                <div style="width:48px;height:48px;border:3px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                <span style="font-size:13px;">Loading ${escapeHTML(file.name)}...</span>
+            </div>`;
         modal.classList.add('active');
 
-        // Background refresh for expired Telegram URLs
-        if (file.fileId) {
-            const activeDrive = getActiveDrive();
-            if (activeDrive && activeDrive.getFileDownloadUrl) {
-                activeDrive.getFileDownloadUrl(file.fileId).then(freshUrl => {
-                    if (freshUrl) {
-                        file.url = freshUrl;
-                        const el = document.getElementById('mediaElement');
-                        if (el) el.src = freshUrl;
-                        if (downloadBtn) downloadBtn.href = freshUrl;
-                    }
-                }).catch(() => {});
+        // Always fetch a fresh URL from Telegram (URLs expire in 1hr)
+        const activeDrive = getActiveDrive();
+        const doRender = (src) => {
+            if (downloadBtn) {
+                downloadBtn.href = src || '#';
+                downloadBtn.setAttribute('download', file.name);
             }
+            if (file.category === 'images') {
+                body.innerHTML = `<img src="${src}" alt="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;" onerror="this.outerHTML='<p style=color:var(--text-secondary)>Could not load image. Try downloading instead.</p>'">`;
+            } else if (file.category === 'videos') {
+                body.innerHTML = `<video src="${src}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:8px;outline:none;"></video>`;
+            } else if (file.category === 'music') {
+                body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:30px;">
+                        <div style="width:80px;height:80px;background:rgba(101,222,105,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px var(--accent-glow);">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        </div>
+                        <audio src="${src}" controls autoplay style="width:320px;outline:none;"></audio>
+                    </div>`;
+            } else {
+                body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;text-align:center;">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        <p style="font-size:14px;color:var(--text-secondary);">${escapeHTML(file.name)} (${formatFileSize(file.size)})</p>
+                        <a href="${src}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🔗 Open in New Tab</a>
+                    </div>`;
+            }
+        };
+
+        if (file.fileId && activeDrive.getFileDownloadUrl) {
+            activeDrive.getFileDownloadUrl(file.fileId)
+                .then(freshUrl => {
+                    if (freshUrl) { file.url = freshUrl; }
+                    doRender(freshUrl || file.url || '');
+                })
+                .catch(() => doRender(file.url || ''));
+        } else {
+            doRender(file.url || '');
         }
     }
 
-    // Also expose globally for any legacy callers
+    // Expose globally
     window.openMediaViewer = openMediaViewerById;
 
-    // Close media viewer — dedicated close button
+    // Close media viewer — dedicated close button (stop propagation so it doesn't bubble to overlay)
     const closeMediaViewerBtn = document.getElementById('closeMediaViewerBtn');
     if (closeMediaViewerBtn) {
-        closeMediaViewerBtn.addEventListener('click', () => {
+        closeMediaViewerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const modal = document.getElementById('mediaViewerModal');
             const body = document.getElementById('mediaViewerBody');
             if (body) body.innerHTML = '';
@@ -215,14 +220,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close on overlay click
-    document.getElementById('mediaViewerModal')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            e.currentTarget.classList.remove('active');
-            const body = document.getElementById('mediaViewerBody');
-            if (body) body.innerHTML = '';
-        }
-    });
+    // Close on dark overlay click
+    const mediaViewerModal = document.getElementById('mediaViewerModal');
+    if (mediaViewerModal) {
+        mediaViewerModal.addEventListener('click', (e) => {
+            if (e.target === mediaViewerModal) {
+                mediaViewerModal.classList.remove('active');
+                const body = document.getElementById('mediaViewerBody');
+                if (body) body.innerHTML = '';
+            }
+        });
+    }
 
     function updateStorageUsage() {
         const activeDrive = getActiveDrive();

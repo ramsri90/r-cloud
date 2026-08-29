@@ -92,18 +92,18 @@ class UniversalBotDrive {
                         progressCallback(pct);
                     }
                 };
+                // When upload reaches 100%, show waiting state
+                xhr.upload.onloadend = () => progressCallback(100);
             }
 
-            xhr.onload = async () => {
+            xhr.onload = () => {
                 if (xhr.status === 200) {
                     try {
                         const res = JSON.parse(xhr.responseText);
                         if (res.ok && res.result) {
                             const mediaObj = res.result.document || res.result.video || res.result.audio || (res.result.photo && res.result.photo[res.result.photo.length - 1]);
                             const fileId = mediaObj ? mediaObj.file_id : null;
-                            const downloadUrl = fileId ? await this.getFileDownloadUrl(fileId) : '';
-                            const localBlobUrl = URL.createObjectURL(file);
-                            
+
                             const newFile = {
                                 id: 'file_' + Date.now(),
                                 fileId: fileId || '',
@@ -111,10 +111,17 @@ class UniversalBotDrive {
                                 size: file.size,
                                 type: file.type || 'application/octet-stream',
                                 date: new Date().toLocaleDateString(),
-                                url: downloadUrl || localBlobUrl,
-                                localUrl: localBlobUrl,
+                                url: '',  // will be fetched below
                                 category: this.detectCategory(file.type, file.name)
                             };
+
+                            // Fetch download URL async (non-blocking)
+                            if (fileId) {
+                                this.getFileDownloadUrl(fileId).then(url => {
+                                    newFile.url = url || '';
+                                    localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
+                                }).catch(() => {});
+                            }
 
                             this.files.unshift(newFile);
                             localStorage.setItem(this.filesKey(), JSON.stringify(this.files));

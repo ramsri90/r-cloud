@@ -613,3 +613,8 @@ body {
         padding: 16px;
     }
 }
+
+/* Loading Spinner */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
