@@ -110,7 +110,7 @@ class UniversalBotDrive {
                                 type: file.type,
                                 date: new Date().toLocaleDateString(),
                                 url: downloadUrl || URL.createObjectURL(file),
-                                category: this.detectCategory(file.type)
+                                category: this.detectCategory(file.type, file.name)
                             };
 
                             this.files.unshift(newFile);
@@ -203,7 +203,7 @@ class UniversalBotDrive {
                                 type: fileObj.mimeType,
                                 date: new Date(post.date * 1000).toLocaleDateString(),
                                 url: downloadUrl || '',
-                                category: this.detectCategory(fileObj.mimeType)
+                                category: this.detectCategory(fileObj.mimeType, fileObj.name)
                             };
                             this.files.unshift(newFile);
                         }
@@ -215,20 +215,30 @@ class UniversalBotDrive {
             console.warn('[R Cloud] syncChannelFiles error:', e);
         }
 
-        // Refresh URLs for existing files if missing
+        // Refresh URLs for existing files to prevent Telegram 1-hour URL expiration
         for (const file of this.files) {
-            if (file.fileId && !file.url) {
-                file.url = await this.getFileDownloadUrl(file.fileId);
+            if (file.fileId) {
+                const freshUrl = await this.getFileDownloadUrl(file.fileId);
+                if (freshUrl) file.url = freshUrl;
             }
         }
         localStorage.setItem(this.filesKey(), JSON.stringify(this.files));
         return this.files;
     }
 
-    detectCategory(mimeType) {
-        if (mimeType.startsWith('image/')) return 'images';
-        if (mimeType.startsWith('video/')) return 'videos';
-        if (mimeType.startsWith('audio/')) return 'music';
+    detectCategory(mimeType, fileName = '') {
+        const name = (fileName || '').toLowerCase();
+        const mime = (mimeType || '').toLowerCase();
+
+        if (mime.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name)) {
+            return 'images';
+        }
+        if (mime.startsWith('video/') || /\.(mp4|webm|mkv|mov|avi|flv)$/i.test(name)) {
+            return 'videos';
+        }
+        if (mime.startsWith('audio/') || /\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(name)) {
+            return 'music';
+        }
         return 'documents';
     }
 

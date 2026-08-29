@@ -121,11 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
     }
 
-    window.openMediaViewer = function(fileId) {
+    window.openMediaViewer = async function(fileId) {
         const activeDrive = getActiveDrive();
         const files = activeDrive.getFiles('all');
         const file = files.find(f => f.id === fileId);
         if (!file) return;
+
+        // Fresh URL check to prevent expired Telegram links
+        if (file.fileId && activeDrive.getFileDownloadUrl) {
+            const freshUrl = await activeDrive.getFileDownloadUrl(file.fileId);
+            if (freshUrl) file.url = freshUrl;
+        }
 
         const modal = document.getElementById('mediaViewerModal');
         const title = document.getElementById('mediaViewerTitle');
